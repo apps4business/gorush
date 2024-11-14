@@ -493,7 +493,6 @@ Retry:
 	default:
 		clients.APNS = clients.APNS.Production()
 	}
-	logx.LogAccess.Infof("Test: %v", clients.APNS)
 
 	var wg sync.WaitGroup
 	for _, token := range req.Tokens {
