@@ -23,6 +23,18 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
+func InitFCMClientEx(ctx context.Context, keyFile string, cfg *config.ConfYaml) (*fcm.Client, error) {
+	var opts []fcm.Option
+
+	opts = append(opts, fcm.WithCredentialsFile(keyFile))
+
+	var client *fcm.Client
+	var err error
+	client, err = fcm.NewClient(ctx, opts...)
+
+	return client, err
+}
+
 // InitFCMClient use for initialize FCM Client.
 func InitFCMClient(ctx context.Context, cfg *config.ConfYaml) (*fcm.Client, error) {
 	var opts []fcm.Option
@@ -197,7 +209,7 @@ func PushToAndroid(ctx context.Context, req *PushNotification, cfg *config.ConfY
 	logx.LogAccess.Debug("Start push notification for Android")
 
 	var (
-		client     *fcm.Client
+		clients    *AppClients
 		retryCount = 0
 		maxRetry   = cfg.Android.MaxRetry
 	)
@@ -214,7 +226,16 @@ func PushToAndroid(ctx context.Context, req *PushNotification, cfg *config.ConfY
 	}
 
 	resp = &ResponsePush{}
-	client, err = InitFCMClient(ctx, cfg)
+
+	logx.LogAccess.Infof("Sending FCM push to %s", req.Application)
+	clients = Clients[req.Application]
+	if clients == nil {
+		clients = &AppClients{}
+		clients.ID = req.Application
+	}
+	if clients.FCM == nil {
+		clients.FCM, err = InitFCMClientEx(ctx, req.KeyFile, cfg)
+	}
 
 Retry:
 	messages := GetAndroidNotification(req)
@@ -231,7 +252,7 @@ Retry:
 		}
 	}
 
-	res, err := client.Send(ctx, messages...)
+	res, err := clients.FCM.Send(ctx, messages...)
 	if err != nil {
 		newErr := fmt.Errorf("fcm service send message error: %v", err)
 		logx.LogError.Error(newErr)
@@ -308,6 +329,7 @@ func logPush(cfg *config.ConfYaml, status, token string, req *PushNotification, 
 		Token:       token,
 		Message:     req.Message,
 		Platform:    req.Platform,
+		Application: req.Application,
 		Error:       err,
 		HideToken:   cfg.Log.HideToken,
 		HideMessage: cfg.Log.HideMessages,

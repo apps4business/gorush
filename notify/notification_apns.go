@@ -58,6 +58,42 @@ type Sound struct {
 	Volume   float32 `json:"volume,omitempty"`
 }
 
+func InitAPNSClientEx(ctx context.Context, keyFile string, keyPassword string, cfg *config.ConfYaml) (*apns2.Client, error) {
+	var err error
+	var certificateKey tls.Certificate
+	var client *apns2.Client
+
+	certificateKey, err = certificate.FromP12File(keyFile, keyPassword)
+	if err != nil {
+		logx.LogError.Error("Cert Error:", err.Error())
+
+		return nil, err
+	}
+
+	client, err = newApnsClient(cfg, certificateKey)
+	if err != nil {
+		logx.LogError.Error("Client init error:", err.Error())
+
+		return nil, err
+	}
+
+	if h2Transport, ok := client.HTTPClient.Transport.(*http2.Transport); ok {
+		configureHTTP2ConnHealthCheck(h2Transport)
+	}
+
+	if err != nil {
+		logx.LogError.Error("Transport Error:", err.Error())
+
+		return nil, err
+	}
+
+	doOnce.Do(func() {
+		MaxConcurrentIOSPushes = make(chan struct{}, cfg.Ios.MaxConcurrentPushes)
+	})
+
+	return client, err
+}
+
 // InitAPNSClient use for initialize APNs Client.
 func InitAPNSClient(ctx context.Context, cfg *config.ConfYaml) error {
 	if cfg.Ios.Enabled {
@@ -333,7 +369,7 @@ func GetIOSNotification(req *PushNotification) *apns2.Notification {
 	}
 
 	if len(req.Priority) > 0 {
-		if req.Priority == "normal" {
+		if req.Priority == NORMAL {
 			notification.Priority = apns2.PriorityLow
 		} else if req.Priority == HIGH {
 			notification.Priority = apns2.PriorityHigh
@@ -440,7 +476,24 @@ Retry:
 	var newTokens []string
 
 	notification := GetIOSNotification(req)
-	client := getApnsClient(cfg, req)
+
+	logx.LogAccess.Infof("Sending APNS push to %s", req.Application)
+	var clients = Clients[req.Application]
+	if clients == nil {
+		clients = &AppClients{}
+		clients.ID = req.Application
+	}
+	if clients.APNS == nil {
+		clients.APNS, err = InitAPNSClientEx(ctx, req.KeyFile, req.Password, cfg)
+	}
+
+	switch {
+	case req.Development:
+		clients.APNS = clients.APNS.Development()
+	default:
+		clients.APNS = clients.APNS.Production()
+	}
+	logx.LogAccess.Infof("Test: %v", clients.APNS)
 
 	var wg sync.WaitGroup
 	for _, token := range req.Tokens {
@@ -451,7 +504,7 @@ Retry:
 			notification.DeviceToken = token
 
 			// send ios notification
-			res, err := client.PushWithContext(ctx, &notification)
+			res, err := clients.APNS.PushWithContext(ctx, &notification)
 			if err != nil || (res != nil && res.StatusCode != http.StatusOK) {
 				if err == nil {
 					// error message:

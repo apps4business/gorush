@@ -359,13 +359,13 @@ func main() {
 		return nil
 	})
 
-	if cfg.Ios.Enabled {
+	if false && cfg.Ios.Enabled {
 		if err = notify.InitAPNSClient(g.ShutdownContext(), cfg); err != nil {
 			logx.LogError.Fatal(err)
 		}
 	}
 
-	if cfg.Android.Enabled {
+	if false && cfg.Android.Enabled {
 		if _, err = notify.InitFCMClient(g.ShutdownContext(), cfg); err != nil {
 			logx.LogError.Fatal(err)
 		}

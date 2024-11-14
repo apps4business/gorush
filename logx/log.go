@@ -23,12 +23,13 @@ var (
 
 // LogPushEntry is push response log
 type LogPushEntry struct {
-	ID       string `json:"notif_id,omitempty"`
-	Type     string `json:"type"`
-	Platform string `json:"platform"`
-	Token    string `json:"token"`
-	Message  string `json:"message"`
-	Error    string `json:"error"`
+	ID          string `json:"notif_id,omitempty"`
+	Type        string `json:"type"`
+	Platform    string `json:"platform"`
+	Application string `json:"application"`
+	Token       string `json:"token"`
+	Message     string `json:"message"`
+	Error       string `json:"error"`
 }
 
 var isTerm bool
@@ -181,12 +182,13 @@ func GetLogPushEntry(input *InputLog) LogPushEntry {
 	}
 
 	return LogPushEntry{
-		ID:       input.ID,
-		Type:     input.Status,
-		Platform: plat,
-		Token:    token,
-		Message:  message,
-		Error:    errMsg,
+		ID:          input.ID,
+		Type:        input.Status,
+		Platform:    plat,
+		Application: input.Application,
+		Token:       token,
+		Message:     message,
+		Error:       errMsg,
 	}
 }
 
@@ -197,6 +199,7 @@ type InputLog struct {
 	Token       string
 	Message     string
 	Platform    int
+	Application string
 	Error       error
 	HideToken   bool
 	HideMessage bool
@@ -226,9 +229,9 @@ func LogPush(input *InputLog) LogPushEntry {
 				typeColor = green
 			}
 
-			output = fmt.Sprintf("|%s %s %s| %s%s%s [%s] %s",
+			output = fmt.Sprintf("|%s %s %s| %s%s@%s%s [%s] %s",
 				typeColor, log.Type, resetColor,
-				platColor, log.Platform, resetColor,
+				platColor, log.Platform, log.Application, resetColor,
 				log.Token,
 				log.Message,
 			)
@@ -237,9 +240,9 @@ func LogPush(input *InputLog) LogPushEntry {
 				typeColor = red
 			}
 
-			output = fmt.Sprintf("|%s %s %s| %s%s%s [%s] | %s | Error Message: %s",
+			output = fmt.Sprintf("|%s %s %s| %s%s@%s%s [%s] | %s | Error Message: %s",
 				typeColor, log.Type, resetColor,
-				platColor, log.Platform, resetColor,
+				platColor, log.Platform, log.Application, resetColor,
 				log.Token,
 				log.Message,
 				log.Error,

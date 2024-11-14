@@ -69,7 +69,10 @@ type PushNotification struct {
 	To               string      `json:"to,omitempty"`
 	Topic            string      `json:"topic,omitempty"` // FCM and iOS only
 	Tokens           []string    `json:"tokens" binding:"required"`
+	Application      string      `json:"app" binding:"required"`
 	Platform         int         `json:"platform" binding:"required"`
+	KeyFile          string      `json:"key_file" binding:"required"`
+	Password         string      `json:"key_password,omitempty"`
 	Message          string      `json:"message,omitempty"`
 	Title            string      `json:"title,omitempty"`
 	Image            string      `json:"image,omitempty"`
@@ -197,9 +200,9 @@ func CheckPushConf(cfg *config.ConfYaml) error {
 		return errors.New("please enable iOS, Android or Huawei config in yml config")
 	}
 
-	if cfg.Ios.Enabled {
+	if false && cfg.Ios.Enabled {
 		if cfg.Ios.KeyPath == "" && cfg.Ios.KeyBase64 == "" {
-			return errors.New("missing iOS certificate key")
+			return errors.New("CheckPushConf: missing iOS certificate key")
 		}
 
 		// check certificate file exist
@@ -210,12 +213,12 @@ func CheckPushConf(cfg *config.ConfYaml) error {
 		}
 	}
 
-	if cfg.Android.Enabled {
+	if false && cfg.Android.Enabled {
 		credential := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 		if cfg.Android.Credential == "" &&
 			cfg.Android.KeyPath == "" &&
 			credential == "" {
-			return errors.New("missing fcm credential data")
+			return errors.New("CheckPushConf: missing fcm credential data")
 		}
 	}
 

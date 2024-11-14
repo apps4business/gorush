@@ -84,7 +84,7 @@ queue:
     stream_name: gorush
 
 ios:
-  enabled: false
+  enabled: true
   key_path: ""
   key_base64: "" # load iOS key from base64 input
   key_type: "pem" # could be pem, p12 or p8 type
